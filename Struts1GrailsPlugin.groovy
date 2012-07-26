@@ -19,6 +19,12 @@ is an older first generation framework and this plug-in facilitates migration aw
         }
     }
 
+    def doWithSpring = {
+        multipartResolver(org.codehaus.grails.struts.StrutsAwareMultipartResolver) {
+                    strutsActionExtension = ".do"
+
+        }
+    }
     def doWithWebDescriptor = { xml ->
         def strutsServlet = xml.servlet.find { it.'servlet-name' == 'struts' }
 
