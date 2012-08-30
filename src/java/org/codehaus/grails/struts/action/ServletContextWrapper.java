@@ -14,290 +14,299 @@
  */
 package org.codehaus.grails.struts.action;
 
-import org.springframework.util.Assert;
+import grails.util.BuildSettings;
+import grails.util.BuildSettingsHolder;
 
-import org.springframework.core.io.*;
-import org.codehaus.groovy.grails.commons.ApplicationHolder;
-import org.codehaus.groovy.grails.commons.GrailsApplication;
-
-import javax.servlet.*;
-import javax.servlet.descriptor.JspConfigDescriptor;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.EventListener;
 import java.util.Map;
 import java.util.Set;
-import java.util.Enumeration;
-import java.net.URL;
-import java.net.MalformedURLException;
-import java.io.InputStream;
-import java.io.IOException;
-import grails.util.*;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterRegistration;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
+import javax.servlet.SessionCookieConfig;
+import javax.servlet.SessionTrackingMode;
+import javax.servlet.descriptor.JspConfigDescriptor;
+
+import org.codehaus.groovy.grails.commons.GrailsApplication;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 /**
- * A ServletContextWrapper that allows Struts to read the web.xml file from Grails' generated one
+ * Allows Struts to read the web.xml file from Grails' generated one.
  *
  * @author Graeme Rocher
  * @since 1.0
- *        <p/>
- *        Created: Mar 4, 2008
  */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class ServletContextWrapper implements ServletContext {
-    private ServletContext adaptee;
-    private GrailsApplication application;
 
-    public ServletContextWrapper(ServletContext adaptee) {
-        super();
+	private ServletContext adaptee;
+	private GrailsApplication application;
 
-        Assert.notNull(adaptee);
-        this.adaptee = adaptee;
-        this.application = ApplicationHolder.getApplication();
-        Assert.notNull(application,"Implementation requires a GrailsApplication instance to be registered with the ApplicationHolder");
-    }
+	public ServletContextWrapper(ServletContext adaptee) {
+		Assert.notNull(adaptee);
+		this.adaptee = adaptee;
 
-    public String getContextPath() {
-        return adaptee.getContextPath();
-    }
+		WebApplicationContext applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(adaptee);
+		application = (GrailsApplication)applicationContext.getBean("grailsApplication");
+	}
 
-    public ServletContext getContext(String s) {
-        return adaptee.getContext(s);
-    }
+	public String getContextPath() {
+		return adaptee.getContextPath();
+	}
 
-    public int getMajorVersion() {
-        return adaptee.getMajorVersion();
-    }
+	public ServletContext getContext(String s) {
+		return adaptee.getContext(s);
+	}
 
-    public int getMinorVersion() {
-        return adaptee.getMinorVersion();
-    }
+	public int getMajorVersion() {
+		return adaptee.getMajorVersion();
+	}
 
-    public String getMimeType(String s) {
-        return adaptee.getMimeType(s);
-    }
+	public int getMinorVersion() {
+		return adaptee.getMinorVersion();
+	}
 
-    public Set getResourcePaths(String s) {
-        return adaptee.getResourcePaths(s);
-    }
+	public String getMimeType(String s) {
+		return adaptee.getMimeType(s);
+	}
 
-    public URL getResource(String s) throws MalformedURLException {
-        return adaptee.getResource(s);
-    }
+	public Set getResourcePaths(String s) {
+		return adaptee.getResourcePaths(s);
+	}
 
-    public InputStream getResourceAsStream(String name) {
-        if(!application.isWarDeployed() && name.equals("/WEB-INF/web.xml")) {
-			BuildSettings settings = BuildSettingsHolder.getSettings();
-            try {
-                Resource resource = new FileSystemResource(settings.getResourcesDir().getAbsolutePath() + "/web.xml");
-                if(resource.exists()) {
-                    return resource.getInputStream();
-                }
-                else {
-                    return null;
-                }
-            } catch (IOException e) {
-                adaptee.log(e.getMessage(),e);
-                return null;
-            }
+	public URL getResource(String s) throws MalformedURLException {
+		return adaptee.getResource(s);
+	}
 
-        }
-        else {
-            return adaptee.getResourceAsStream(name);
-        }
-    }
+	public InputStream getResourceAsStream(String name) {
+		if (application.isWarDeployed() || !name.equals("/WEB-INF/web.xml")) {
+			return adaptee.getResourceAsStream(name);
+		}
 
-    public RequestDispatcher getRequestDispatcher(String s) {
-        return adaptee.getRequestDispatcher(s);
-    }
+		BuildSettings settings = BuildSettingsHolder.getSettings();
+		try {
+			Resource resource = new FileSystemResource(settings.getResourcesDir().getAbsolutePath() + "/web.xml");
+			return resource.exists() ? resource.getInputStream() : null;
+		}
+		catch (IOException e) {
+			adaptee.log(e.getMessage(), e);
+			return null;
+		}
+	}
 
-    public RequestDispatcher getNamedDispatcher(String s) {
-        return adaptee.getNamedDispatcher(s);
-    }
+	public RequestDispatcher getRequestDispatcher(String s) {
+		return adaptee.getRequestDispatcher(s);
+	}
 
-    public Servlet getServlet(String s) throws ServletException {
-        return adaptee.getServlet(s);
-    }
+	public RequestDispatcher getNamedDispatcher(String s) {
+		return adaptee.getNamedDispatcher(s);
+	}
 
-    public Enumeration getServlets() {
-        return adaptee.getServlets();
-    }
+	@SuppressWarnings("deprecation")
+	public Servlet getServlet(String s) throws ServletException {
+		return adaptee.getServlet(s);
+	}
 
-    public Enumeration getServletNames() {
-        return adaptee.getServletNames();
-    }
+	@SuppressWarnings("deprecation")
+	public Enumeration getServlets() {
+		return adaptee.getServlets();
+	}
 
-    public void log(String s) {
-        adaptee.log(s);
-    }
+	@SuppressWarnings("deprecation")
+	public Enumeration getServletNames() {
+		return adaptee.getServletNames();
+	}
 
-    public void log(Exception e, String s) {
-        adaptee.log(e,s);
-    }
+	public void log(String s) {
+		adaptee.log(s);
+	}
 
-    public void log(String s, Throwable throwable) {
-        adaptee.log(s,throwable);
-    }
+	@SuppressWarnings("deprecation")
+	public void log(Exception e, String s) {
+		adaptee.log(e, s);
+	}
 
-    public String getRealPath(String s) {
-        return adaptee.getRealPath(s);
-    }
+	public void log(String s, Throwable throwable) {
+		adaptee.log(s, throwable);
+	}
 
-    public String getServerInfo() {
-        return adaptee.getServerInfo();
-    }
+	public String getRealPath(String s) {
+		return adaptee.getRealPath(s);
+	}
 
-    public String getInitParameter(String s) {
-        return adaptee.getInitParameter(s);
-    }
+	public String getServerInfo() {
+		return adaptee.getServerInfo();
+	}
 
-    public Enumeration getInitParameterNames() {
-        return adaptee.getInitParameterNames();
-    }
+	public String getInitParameter(String s) {
+		return adaptee.getInitParameter(s);
+	}
 
-    public Object getAttribute(String s) {
-        return adaptee.getAttribute(s);
-    }
+	public Enumeration getInitParameterNames() {
+		return adaptee.getInitParameterNames();
+	}
 
-    public Enumeration getAttributeNames() {
-        return adaptee.getAttributeNames();
-    }
+	public Object getAttribute(String s) {
+		return adaptee.getAttribute(s);
+	}
 
-    public void setAttribute(String s, Object o) {
-        adaptee.setAttribute(s,o);
-    }
+	public Enumeration getAttributeNames() {
+		return adaptee.getAttributeNames();
+	}
 
-    public void removeAttribute(String s) {
-        adaptee.removeAttribute(s);
-    }
+	public void setAttribute(String s, Object o) {
+		adaptee.setAttribute(s, o);
+	}
 
-    public String getServletContextName() {
-        return adaptee.getServletContextName();
-    }
+	public void removeAttribute(String s) {
+		adaptee.removeAttribute(s);
+	}
 
-    @Override
-    public JspConfigDescriptor getJspConfigDescriptor() {
-        return adaptee.getJspConfigDescriptor();
-    }
+	public String getServletContextName() {
+		return adaptee.getServletContextName();
+	}
 
-    @Override
-    public ClassLoader getClassLoader() {
-        return adaptee.getClassLoader();
-    }
+	@Override
+	public JspConfigDescriptor getJspConfigDescriptor() {
+		return adaptee.getJspConfigDescriptor();
+	}
 
-    @Override
-    public void declareRoles(String... strings) {
-        adaptee.declareRoles(strings);
-    }
+	@Override
+	public ClassLoader getClassLoader() {
+		return adaptee.getClassLoader();
+	}
 
-    @Override
-    public <T extends EventListener> T createListener(Class<T> tClass) throws ServletException {
-       return adaptee.createListener(tClass);
-    }
+	@Override
+	public void declareRoles(String... strings) {
+		adaptee.declareRoles(strings);
+	}
 
-    @Override
-    public <T extends EventListener> void addListener(T t) {
-         adaptee.addListener(t);
-    }
+	@Override
+	public <T extends EventListener> T createListener(Class<T> tClass) throws ServletException {
+		return adaptee.createListener(tClass);
+	}
 
-    @Override
-    public void addListener(String s) {
-        adaptee.addListener(s);
-    }
+	@Override
+	public <T extends EventListener> void addListener(T t) {
+		adaptee.addListener(t);
+	}
 
-    @Override
-    public void addListener(Class<? extends EventListener> aClass) {
-        adaptee.addListener(aClass);
-    }
+	@Override
+	public void addListener(String s) {
+		adaptee.addListener(s);
+	}
 
-    @Override
-    public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        return adaptee.getEffectiveSessionTrackingModes();
-    }
+	@Override
+	public void addListener(Class<? extends EventListener> aClass) {
+		adaptee.addListener(aClass);
+	}
 
-    @Override
-    public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        return adaptee.getDefaultSessionTrackingModes();
-    }
+	@Override
+	public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
+		return adaptee.getEffectiveSessionTrackingModes();
+	}
 
-    @Override
-    public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) throws IllegalStateException, IllegalArgumentException {
-        adaptee.setSessionTrackingModes(sessionTrackingModes);
-    }
+	@Override
+	public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
+		return adaptee.getDefaultSessionTrackingModes();
+	}
 
-    @Override
-    public SessionCookieConfig getSessionCookieConfig() {
-        return adaptee.getSessionCookieConfig();
-    }
+	@Override
+	public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes) throws IllegalStateException, IllegalArgumentException {
+		adaptee.setSessionTrackingModes(sessionTrackingModes);
+	}
 
-    @Override
-    public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-        return adaptee.getFilterRegistrations();
-    }
+	@Override
+	public SessionCookieConfig getSessionCookieConfig() {
+		return adaptee.getSessionCookieConfig();
+	}
 
-    @Override
-    public FilterRegistration getFilterRegistration(String s) {
-        return adaptee.getFilterRegistration(s);
-    }
+	@Override
+	public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
+		return adaptee.getFilterRegistrations();
+	}
 
-    @Override
-    public <T extends Filter> T createFilter(Class<T> tClass) throws ServletException {
-       return adaptee.createFilter(tClass);
-    }
+	@Override
+	public FilterRegistration getFilterRegistration(String s) {
+		return adaptee.getFilterRegistration(s);
+	}
 
-    @Override
-    public FilterRegistration.Dynamic addFilter(String s, Class<? extends Filter> aClass) {
-        return adaptee.addFilter(s,aClass);
-    }
+	@Override
+	public <T extends Filter> T createFilter(Class<T> tClass) throws ServletException {
+		return adaptee.createFilter(tClass);
+	}
 
-    @Override
-    public FilterRegistration.Dynamic addFilter(String s, Filter filter) {
-        return adaptee.addFilter(s,filter);
-    }
+	@Override
+	public FilterRegistration.Dynamic addFilter(String s, Class<? extends Filter> aClass) {
+		return adaptee.addFilter(s, aClass);
+	}
 
-    @Override
-    public FilterRegistration.Dynamic addFilter(String s, String s1) {
-        return adaptee.addFilter(s,s1);
-    }
+	@Override
+	public FilterRegistration.Dynamic addFilter(String s, Filter filter) {
+		return adaptee.addFilter(s, filter);
+	}
 
-    @Override
-    public Map<String, ? extends ServletRegistration> getServletRegistrations() {
-        return adaptee.getServletRegistrations();
-    }
+	@Override
+	public FilterRegistration.Dynamic addFilter(String s, String s1) {
+		return adaptee.addFilter(s, s1);
+	}
 
-    @Override
-    public ServletRegistration getServletRegistration(String s) {
-        return adaptee.getServletRegistration(s);
-    }
+	@Override
+	public Map<String, ? extends ServletRegistration> getServletRegistrations() {
+		return adaptee.getServletRegistrations();
+	}
 
-    @Override
-    public <T extends Servlet> T createServlet(Class<T> tClass) throws ServletException {
-        return adaptee.createServlet(tClass);
-    }
+	@Override
+	public ServletRegistration getServletRegistration(String s) {
+		return adaptee.getServletRegistration(s);
+	}
 
-    @Override
-    public ServletRegistration.Dynamic addServlet(String s, Class<? extends Servlet> aClass) {
-        return adaptee.addServlet(s,aClass);
-    }
+	@Override
+	public <T extends Servlet> T createServlet(Class<T> tClass) throws ServletException {
+		return adaptee.createServlet(tClass);
+	}
 
-    @Override
-    public ServletRegistration.Dynamic addServlet(String s, Servlet servlet) {
-        return adaptee.addServlet(s,servlet);
-    }
+	@Override
+	public ServletRegistration.Dynamic addServlet(String s, Class<? extends Servlet> aClass) {
+		return adaptee.addServlet(s, aClass);
+	}
 
-    @Override
-    public ServletRegistration.Dynamic addServlet(String s, String s1) {
-        return adaptee.addServlet(s,s1);
-    }
+	@Override
+	public ServletRegistration.Dynamic addServlet(String s, Servlet servlet) {
+		return adaptee.addServlet(s, servlet);
+	}
 
-    @Override
-    public boolean setInitParameter(String s, String s1) {
-        return adaptee.setInitParameter(s,s1);
-    }
+	@Override
+	public ServletRegistration.Dynamic addServlet(String s, String s1) {
+		return adaptee.addServlet(s, s1);
+	}
 
-    @Override
-    public int getEffectiveMinorVersion() {
-        return adaptee.getEffectiveMinorVersion();
-    }
+	@Override
+	public boolean setInitParameter(String s, String s1) {
+		return adaptee.setInitParameter(s, s1);
+	}
 
-    @Override
-    public int getEffectiveMajorVersion() {
-        return adaptee.getEffectiveMajorVersion();
-    }
+	@Override
+	public int getEffectiveMinorVersion() {
+		return adaptee.getEffectiveMinorVersion();
+	}
+
+	@Override
+	public int getEffectiveMajorVersion() {
+		return adaptee.getEffectiveMajorVersion();
+	}
 }

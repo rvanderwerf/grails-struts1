@@ -1,45 +1,42 @@
 package org.codehaus.grails.struts.action
 
-import org.apache.struts.action.ActionServlet
-import javax.servlet.ServletContext
 import javax.servlet.ServletConfig
+import javax.servlet.ServletContext
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
+
+import org.apache.struts.action.ActionServlet
 import org.apache.struts.action.RequestProcessor
 import org.apache.struts.config.ModuleConfig
-import org.codehaus.groovy.grails.commons.ApplicationHolder
 import org.codehaus.groovy.grails.commons.GrailsApplication
+import org.springframework.web.context.support.WebApplicationContextUtils
 
 /**
-* @author Graeme Rocher
-* @since 1.0
-*
-* Created: Mar 4, 2008
-*/
+ * @author Graeme Rocher
+ * @since 1.0
+ */
 class GrailsAwareActionServlet extends ActionServlet {
 
-    public ServletContext getServletContext() {
-        return new ServletContextWrapper(super.getServletContext()); 
-    }
+	ServletContext getServletContext() {
+		new ServletContextWrapper(super.getServletContext())
+	}
 
-    protected synchronized RequestProcessor getRequestProcessor(ModuleConfig config) {
-        GrailsApplication application = ApplicationHolder.getApplication()
-        if(!application.isWarDeployed()) {
+	@Override
+	protected synchronized RequestProcessor getRequestProcessor(ModuleConfig config) {
+		def applicationContext = WebApplicationContextUtils.getRequiredWebApplicationContext(super.getServletContext())
+		GrailsApplication application = applicationContext.grailsApplication
+		if (application.isWarDeployed()) {
+			return super.getRequestProcessor(config)
+		}
 
-            Thread t = Thread.currentThread()
-            ClassLoader cl = t.getContextClassLoader();
-            try {
-                t.setContextClassLoader application.getClassLoader()
-                return super.getRequestProcessor(config)
-            } finally {
-                t.setContextClassLoader cl
-            };
-        }
-        else {
-            return super.getRequestProcessor(config)
-        }
-    }
-
-
-
+		Thread thread = Thread.currentThread()
+		ClassLoader cl = thread.getContextClassLoader()
+		try {
+			thread.setContextClassLoader application.getClassLoader()
+			return super.getRequestProcessor(config)
+		}
+		finally {
+			thread.setContextClassLoader cl
+		}
+	}
 }
