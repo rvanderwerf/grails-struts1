@@ -28,7 +28,9 @@ grails.project.dependency.resolution = {
         compile "taglibs:standard:1.1.2"
 
     }
-
+    plugins {
+        runtime ":release:2.0.4"
+    }
     grails.project.repos.PluginSnapShots.url = "http://127.0.0.1:8083/artifactory/plugins-snapshot-local"
     grails.project.repos.PluginSnapShots.type = "maven"
     grails.project.repos.PluginSnapShots.username = "admin"
