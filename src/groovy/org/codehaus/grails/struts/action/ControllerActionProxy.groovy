@@ -36,23 +36,26 @@ class ControllerActionProxy extends DelegatingActionProxy {
             def controller = applicationContext.getBean(controllerClass.fullName)
             def webRequest = RequestContextHolder.currentRequestAttributes()
 
-            def actionName = controllerClass.getClosurePropertyName(path)
+            def actionName = controllerClass.getMethodActionName(path)
             def viewName = controllerClass.getViewByURI(path)
             
-            webRequest.actionName = actionName
+            webRequest.actionName = actionName + "()"
 
             def request = webRequest.request
 
             request.setAttribute('org.codehaus.grails.struts.ACTION_MAPPING',actionMapping)
             request.setAttribute('org.codehaus.grails.struts.ACTION_FORM', actionForm)
 
-            def result = controller[actionName].call()
+            def result = controller.actionName+"()"
 
-            def helper = new MethodGrailsControllerHelper(application, applicationContext, getServlet().getServletContext())
-            //helper.configureStateForWebRequest(webRequest, webRequest.getRequest())
-            // helper.set
-            helper.setApplicationContext()
-            ModelAndView mv = helper.handleActionResponse(controller, result, actionName, viewName)
+
+            def helper = new MethodGrailsControllerHelper()
+            helper.setApplicationContext(applicationContext)
+            helper.setServletContext(getServlet().getServletContext())
+            helper.setGrailsApplication(application)
+            GrailsWebRequest grailsWebRequest = new GrailsWebRequest(httpServletRequest,httpServletResponse,getServlet().getServletContext())
+
+            ModelAndView mv = helper.handleActionResponse(controller, result, grailsWebRequest, new HashMap(),actionName, viewName)
             if(mv) {
                 mv.getModel()?.each { k, v ->
                     request.setAttribute(k,v)                    
