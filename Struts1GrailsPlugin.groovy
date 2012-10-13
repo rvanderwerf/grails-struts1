@@ -1,13 +1,14 @@
 import org.codehaus.grails.struts.action.GrailsAwareActionServlet
 
 class Struts1GrailsPlugin {
-    def version = "1.3.10"
+    def version = "1.3.11"
 	def author = "Graeme Rocher"
 	def title = "Provides integration between Grails and the Struts 1 framework"
-	def grailsVersion = "1.1 > *"
+	def grailsVersion = "2.0 > *"
 	def description = """
 A plug-in that makes Struts 1 (http://struts.apache.org/) the default controller/view rendering framework for Grails. Struts
 is an older first generation framework and this plug-in facilitates migration away from Struts to a modern stack like Grails.
+If you want to use this with Grails 1.3.x, you must use v1.3.10 of this plugin as Grails 2 introduced breaking changes.
 	"""
 
     def watchedResources = ["file:./web-app/WEB-INF/struts-config.xml","file:./web-app/WEB-INF/validation.xml"]
@@ -19,12 +20,19 @@ is an older first generation framework and this plug-in facilitates migration aw
         }
     }
 
+    /**
+     * this resolver tells grails not to mess with any struts stuff ending in .do, otherwise
+     * it will break any kind of mime-multipart file uploads
+     */
     def doWithSpring = {
         multipartResolver(org.codehaus.grails.struts.StrutsAwareMultipartResolver) {
                     strutsActionExtension = ".do"
 
         }
     }
+    /**
+     * add struts servlets to web.xml for you
+     */
     def doWithWebDescriptor = { xml ->
         def strutsServlet = xml.servlet.find { it.'servlet-name' == 'struts' }
 
